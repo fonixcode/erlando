@@ -42,17 +42,6 @@ maybe(Arg) ->
         || monad_plus:guard(maybe_m, is_number(Arg)),
            return(Arg*Arg)]).
 
-test_fib() ->
-    true = lists:all(fun ({X, Y}) -> X =:= Y end,
-                     [{fib_m(N), fib_rec(N)} || N <- lists:seq(0, 20)]).
-
-%% Classic monadic implementation of fibonnaci
-fib_m(N) ->
-    StateT = state_t:new(identity_m),
-    {_, R} = StateT:exec(
-               monad:sequence(StateT,
-                              lists:duplicate(N, fib_m_step(StateT))), {0, 1}),
-    R.
 
 fib_m_step(StateT) -> StateT:modify(fun ({X, Y}) -> {Y, X+Y} end).
 
@@ -91,26 +80,6 @@ test_omega() ->
     true = A =/= B,
     true = A =:= lists:usort(B).
 
-test_error_t_list() ->
-    M = error_t:new(list_m),
-    R = M:run(do([M || E1 <- M:lift([1, 2, 3]),
-                       E2 <- M:lift([4, 5, 6]),
-                       case (E1 * E2) rem 2 of
-                           0 -> return({E1, E2});
-                           _ -> fail(not_even_product)
-                       end])),
-    R = [{ok, {1, 4}}, {error, not_even_product}, {ok, {1, 6}},
-         {ok, {2, 4}}, {ok, {2, 5}},              {ok, {2, 6}},
-         {ok, {3, 4}}, {error, not_even_product}, {ok, {3, 6}}],
-
-    %% Compare with the non-error_t version, which will remove failures:
-    S = do([list_m || E1 <- [1, 2, 3],
-                      E2 <- [4, 5, 6],
-                      case (E1 * E2) rem 2 of
-                          0 -> return({E1, E2});
-                          _ -> fail(not_even_product)
-                      end]),
-    S = [{1, 4}, {1, 6}, {2, 4}, {2, 5}, {2, 6}, {3, 4}, {3, 6}].
 
 %% Tests for 'let-match binding' (a-la 'let' in Haskell's 'do'
 %% expression) But instead of 'let' here we use 'match' (=) expression
@@ -194,7 +163,6 @@ test() ->
                           test_fib,
                           test_list,
                           test_omega,
-                          test_error_t_list,
                           test_let_match,
                           test_let_first,
                           test_let_escapes]}],
